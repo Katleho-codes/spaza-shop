@@ -36,3 +36,10 @@ frontend/out/
 frontend/coverage/
 backend/node_modules/
 .env*
+backend/controller/orders/track-order.js
+backend/controller/products/get_products.js
+backend/controller/stores/get-store-by-name.js
+backend/controller/stores/get-stores.js
+frontend/app/stores/\[name]/page.tsx
+frontend/components/FilterSidebar.tsx
+frontend/components/screens/stores/view_store/page.tsx

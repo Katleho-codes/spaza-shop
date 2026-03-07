@@ -1,23 +1,25 @@
+import bodyParser from "body-parser";
 import express from "express";
 import { getRedisClient } from "./config/redis.js";
-import bodyParser from "body-parser";
 // import cookieParser from "cookie-parser";
-import { toNodeHandler } from "better-auth/node";
+import { fromNodeHeaders, toNodeHandler } from "better-auth/node";
 import cors from "cors";
-import helmet from "helmet";
-import "dotenv/config";
-import { auth } from "./utils/auth.js";
 import crypto from "crypto";
+import "dotenv/config";
+import helmet from "helmet";
+import { router as carts } from "./routes/carts/index.js";
 import { router as orders } from "./routes/orders/orders.js";
 import { router as products } from "./routes/products/products.js";
 import { router as stores } from "./routes/stores/stores.js";
+
+import { auth } from "./utils/auth.js";
 
 const app = express();
 const port = process.env.PORT;
 
 const corsOptions = {
-    origin: ["http://localhost:3000"],
-    methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
+    origin: [process.env.CLIENT_URL, process.env.CLIENT_URL_PROD],
+    methods: ["GET", "POST", "PUT", "DELETE"],
     allowedHeaders: ["Content-Type", "Authorization"],
     credentials: true,
 };
@@ -41,7 +43,18 @@ app.disable("x-powered-by");
 
 app.use("/api/orders", orders);
 app.use("/api/products", products);
+app.use("/api/carts", carts);
 app.use("/api/stores", stores);
+
+
+// app.get("/api/me", async (req, res) => {
+//     const session = await auth.api.getSession({
+//         headers: fromNodeHeaders(req.headers),
+//     });
+//     return res.json(session);
+// });
+
+// todo: remove
 app.get("/", (req, res) => {
     res.send(
         "ORD-" +

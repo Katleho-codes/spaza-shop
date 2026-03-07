@@ -1,13 +1,20 @@
 create table orders (
     id bigserial primary key,
-    created_at timestamp,
-    updated_at timestamp,
-    order_number text unique not null,
     user_id integer references users(id) ON DELETE CASCADE,
-    store_id integer references stores(id) ON DELETE CASCADE,
-    product_id integer references products(id) ON DELETE CASCADE,
-    total_amount numeric,
-    quantity integer,
+    order_number text unique not null,
     status text,
+    sub_total numeric,
+    delivery_fee numeric,
+    total_amount numeric,
+    created_at timestamp,
+    shipping_address_id integer REFERENCES shipping_addresses(id)
+);
+
+create table order_items (
+    id bigserial primary key,
+    order_id integer references orders(id) ON DELETE CASCADE,
+    product_id integer references products(id) ON DELETE CASCADE,
+    quantity integer,
+    total_amount numeric,
     currency varchar(3) default 'ZAR'
 )

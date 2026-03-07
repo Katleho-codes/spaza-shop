@@ -1,7 +1,7 @@
 import axios from "axios";
 import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
-type TStores = {
+export type TStores = {
     id: number;
     name: string;
     description: string;

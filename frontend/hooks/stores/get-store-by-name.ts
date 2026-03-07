@@ -2,42 +2,60 @@ import axios from "axios";
 import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
 type TStores = {
-    
+    id: number;
+    name: string;
+    slug: string;
+    products: {
+        id: number;
+        name: string;
+        description: string;
+        category: string;
+        sale_price: number;
+        main_image: string;
+        slug: string;
+    }[];
 };
 
-const useGetStoreByName = (store: string | string[] | any) => {
-    const [storeList, setData] = useState<TStores[]>([]);
+const useGetStoreByName = (
+    store: string | string[] | any,
+    queryString: string | string[],
+) => {
+    const [storeData, setData] = useState<TStores | null>(null);
     const [storeListLoading, setStoreListLoading] = useState(true);
-    const [currentPage, setCurrentPage] = useState(1);
-    const [totalPages, setTotalPages] = useState(0);
-
-    const fetchStores = async (page: number) => {
+    const fetchStore = async () => {
         if (!store) return;
         try {
             setStoreListLoading(true);
             const { data } = await axios.get(
-                `${process.env.NEXT_PUBLIC_API_SERVER_URL}/api/v1/store/${store}`,
+                `${process.env.NEXT_PUBLIC_SERVER_URL}/api/stores/${store}?${queryString}`,
                 {
                     withCredentials: true,
                 },
             );
             if (data) {
-                setData(data?.data);
-                setCurrentPage(data?.meta.totalPages);
-                setTotalPages(data?.meta.currentPage);
+                console.log(
+                    "API response products order:",
+                    data.products.map((p) => ({
+                        name: p.name,
+                        price: p.sale_price,
+                    })),
+                );
+                setData(data);
             }
             return data;
         } catch (error: any) {
+            console.error(error);
             if (error) toast.error(error?.response?.data?.error);
         } finally {
             setStoreListLoading(false);
         }
     };
-
+    const totalProductsByStore =
+        storeData?.products?.reduce((sum, item) => sum + 1, 0) ?? 0;
     useEffect(() => {
-        fetchStores(currentPage);
+        fetchStore();
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [store, currentPage]);
-    return { storeList, fetchStores, storeListLoading, totalPages };
+    }, [store, queryString]);
+    return { storeData, storeListLoading, totalProductsByStore };
 };
 export default useGetStoreByName;

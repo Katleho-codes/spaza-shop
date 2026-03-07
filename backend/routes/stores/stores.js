@@ -3,9 +3,11 @@ import createStore from "../../controller/stores/create-store.js";
 import getAllStores from "../../controller/stores/get-stores.js";
 import getStoreByName from "../../controller/stores/get-store-by-name.js";
 import { limiter } from "../../utils/limiter.js";
+import { isLoggedIn } from "../../middleware/isLoggedIn.js";
+import { optionalAuth } from "../../middleware/optionalAuth.js";
 
 const router = express.Router();
-router.post("/", limiter, createStore);
-router.get("/", getAllStores);
-router.get("/:slug", getStoreByName);
+router.post("/", limiter, isLoggedIn, createStore);
+router.get("/", optionalAuth, getAllStores);
+router.get("/:slug", isLoggedIn, getStoreByName);
 export { router };

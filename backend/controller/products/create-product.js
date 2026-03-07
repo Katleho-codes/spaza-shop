@@ -51,7 +51,7 @@ const createProduct = async (req, res) => {
         store_id,
         low_stock_threshold,
     } = req.body;
-
+    const { user } = req.user;
     const created_at = datetime;
     const sku = "SKU-" + crypto.randomBytes(4).toString("hex").toUpperCase();
     const publicId = "PID" + crypto.randomInt(10_000_000, 100_000_000);
@@ -65,7 +65,7 @@ const createProduct = async (req, res) => {
     try {
         await createProductSchema.validate(req.body, { abortEarly: false });
         const { rows } = await pool.query(
-            "insert into products (created_at, name, description, sku, cost_price, sale_price, stock_quantity, main_image, image_two, category, slug, public_id, store_id, low_stock_threshold) values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14) returning id, created_at, name, description, sku, cost_price, sale_price, stock_quantity, main_image, image_two, category, slug, public_id, store_id, low_stock_threshold",
+            "insert into products (created_at, name, description, sku, cost_price, sale_price, stock_quantity, main_image, image_two, category, slug, public_id, store_id, low_stock_threshold, created_by) values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15) returning id, created_at, name, description, sku, cost_price, sale_price, stock_quantity, main_image, image_two, category, slug, public_id, store_id, low_stock_threshold",
             [
                 created_at,
                 name,
@@ -81,6 +81,7 @@ const createProduct = async (req, res) => {
                 publicId,
                 store_id,
                 low_stock_threshold,
+                user.id,
             ],
         );
         const product = rows[0];

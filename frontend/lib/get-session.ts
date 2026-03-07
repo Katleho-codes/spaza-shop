@@ -2,9 +2,12 @@
 import { headers } from "next/headers";
 
 export async function getSession() {
-    const response = await fetch("http://localhost:8000/api/auth/get-session", {
-        headers: Object.fromEntries(headers()), // Forward cookies to Express
-    });
+    const response = await fetch(
+        `${process.env.NEXT_PUBLIC_SERVER_URL}/api/auth/get-session`,
+        {
+            headers: Object.fromEntries(headers()), // Forward cookies to Express
+        },
+    );
     if (!response.ok) return null;
     return response.json();
 }

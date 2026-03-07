@@ -1,26 +1,32 @@
 "use client"
 
-import { X, Menu, ShoppingCartIcon, CircleUserRoundIcon, UserCircleIcon } from "lucide-react";
-import { useState, useEffect } from "react";
-import { Button } from "./ui/button";
+import { ShoppingCartIcon, StoreIcon, UserCircleIcon } from "lucide-react";
 import Link from "next/link";
+import { useEffect, useState } from "react";
+import { Button } from "./ui/button";
+
 import {
     Sheet,
-    SheetClose,
     SheetContent,
     SheetDescription,
-    SheetFooter,
     SheetHeader,
-    SheetTitle,
-    SheetTrigger,
-} from "@/components/ui/sheet"
-import useCart, { CartItem } from "@/hooks/useCart";
-import CartItemCard from "./CartItemCard";
+    SheetTitle
+} from "@/components/ui/sheet";
 import { useCartContext } from "@/contexts/CartContext";
+import { CartItem } from "@/hooks/carts/useCart";
+import { useSession } from "@/lib/auth-client";
+import axios from "axios";
+import { useRouter } from "next/navigation";
+import CartItemCard from "./CartItemCard";
 
 function MainNav() {
+    const {
+        data: session,
+        isPending, //loading state
+        error, //error object
+        refetch //refetch the session
+    } = useSession()
     const [scrolled, setScrolled] = useState(false);
-    const [mobileOpen, setMobileOpen] = useState(false);
     const [sheetOpen, setSheetOpen] = useState(false);
 
     useEffect(() => {
@@ -37,102 +43,83 @@ function MainNav() {
             quantity: newQuantity,
         });
     };
+    const router = useRouter()
+    const createOrder = async () => {
+        try {
+            const response = await axios.post(`${process.env.NEXT_PUBLIC_SERVER_URL}/api/orders/from-cart`, {}, {
+                withCredentials: true
+            })
+            console.log("create order from cart response", response)
+            router.push("/checkout")
+        } catch (error) {
+            console.error("create order from cart error", error)
 
+        }
+    }
     return (
         <>
 
-            <nav className="fixed top-0 left-0 right-0 z-50 bg-white">
+            <nav className="fixed top-0 left-0 right-0 z-50 bg-white h-22 mb-2 border">
                 <div className="lg:mx-auto lg:container max-w-7xl mx-auto px-6 lg:px-8">
                     <div className="flex items-center justify-between h-20">
                         <Link href={"/"} className="flex items-center gap-2">
-                            <div className="w-10 h-10 rounded-xl bg-linear-to-br from-indigo-500 to-violet-600 flex items-center justify-center">
+                            <div className="w-10 h-10 rounded-xl bg-linear-to-br from-[#F86624] to-[#F15025] flex items-center justify-center">
                                 <span className="text-white font-bold text-lg">D</span>
                             </div>
-                            <span className="text-xl font-semibold text-slate-900">Deliva</span>
+                            <span className="text-xl font-semibold text-[#191919]">Deliva</span>
                         </Link>
 
-                        {/* Desktop Nav */}
-                        {/* <div className="hidden md:flex items-center gap-8">
+                        <>
+                            {
+                                isPending ? (
+                                    <p>Loading user...</p>
+                                ) : session ? (
+                                    <div className="flex items-center gap-4">
+                                        <Link className="font-medium text-[#191919]" href="orders">Orders</Link>
+                                        <Link href="/account">
+                                            <button className="cursor-pointer rounded-full p-2 bg-slate-100 hover:bg-slate-100 transition">
+                                                <UserCircleIcon className="w-6 h-6" />
+                                            </button>
+                                        </Link>
+                                        <Link href="/create-store">
+                                            <Button
+                                                size="icon"
+                                                className="bg-[#191919] hover:bg-[#F15025] text-white rounded-full"
+                                            >
+                                                <StoreIcon className="w-6 h-6" />
+                                            </Button>
+                                        </Link>
 
-                            <Link
-                                href={"/"}
-                                className="text-sm font-medium text-slate-600 hover:text-slate-900 transition-colors"
-                            >
-                                Link 1
-                            </Link>
-                            <Link
-                                href={"/"}
-                                className="text-sm font-medium text-slate-600 hover:text-slate-900 transition-colors"
-                            >
-                                Link 2
-                            </Link>
+                                        <button
+                                            onClick={() => setSheetOpen(true)}
+                                            className="relative cursor-pointer p-2 rounded-full bg-slate-100 hover:bg-slate-100 transition"
+                                        >
+                                            <ShoppingCartIcon className="w-6 h-6" />
 
-                        </div> */}
+                                            {cartCount > 0 && (
+                                                <span className="absolute -top-1 -right-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-red-600 px-1 text-xs font-bold text-white">
+                                                    {cartCount}
+                                                </span>
+                                            )}
+                                        </button>
+                                    </div>
 
-                        <div className="hidden md:flex items-center gap-4">
-                            <button className="cursor-pointer">
-                                <UserCircleIcon className="w-6 h-6" />
-                            </button>
-                            <Link href={"/create-store"}>
-                                <Button className="bg-slate-900 hover:bg-slate-800 text-white rounded-full px-6 cursor-pointer">
-                                    Create store
-                                </Button>
-                            </Link>
-                            <button
-                                onClick={() => setSheetOpen(true)}
-                                className="relative cursor-pointer p-2 rounded-lg hover:bg-slate-100 transition-colors"
-                            >
-                                <ShoppingCartIcon className="w-6 h-6" />
+                                ) : (
+                                    <Link href={"/auth/login"}>
+                                        <Button className="bg-[#F15025] hover:bg-[#F86624] rounded-sm text-white p-6 cursor-pointer font-medium">
+                                            Login/signup
+                                        </Button>
+                                    </Link>
+                                )
+                            }
+                        </>
 
-                                {cartCount > 0 && (
-                                    <span className="absolute -top-1 -right-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-red-600 px-1 text-xs font-bold text-white">
-                                        {cartCount}
-                                    </span>
-                                )}
-                            </button>
-
-                        </div>
-
-                        {/* Mobile Menu Button */}
-                        <button
-                            onClick={() => setMobileOpen(!mobileOpen)}
-                            className="md:hidden p-2 rounded-lg hover:bg-slate-100 transition-colors cursor-pointer"
-                        >
-                            {mobileOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
-                        </button>
                     </div>
                 </div>
 
-
-
-                {mobileOpen && (
-                    <div
-                        className="md:hidden bg-white border-t"
-                    >
-                        <div className="px-6 py-4 space-y-4">
-                            {/* {navLinks.map((link) => (
-                            <Link
-                                key={link.name}
-                                href={link.href}
-                                onClick={() => setMobileOpen(false)}
-                                className="block text-lg font-medium text-slate-600 hover:text-slate-900"
-                            >
-                                {link.name}
-                            </Link>
-                        ))} */}
-                            <div className="pt-4 border-t space-y-3">
-                                <Button variant="outline" className="w-full cursor-pointer">Log in</Button>
-                                {/* <Link href={createPageUrl('Product')}>
-                                <Button className="w-full bg-slate-900">Get Started</Button>
-                            </Link> */}
-                            </div>
-                        </div>
-                    </div>
-                )}
-
             </nav>
             <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
-                <SheetContent className="px-4">
+                <SheetContent className="px-4 flex flex-col h-full">
                     <SheetHeader>
                         <SheetTitle>Your Cart</SheetTitle>
                         <SheetDescription>
@@ -140,29 +127,35 @@ function MainNav() {
                         </SheetDescription>
                     </SheetHeader>
 
-
-                    <div className="min-h-80 overflow-y-auto">
-                        {cart.map((item) => (
-                            // <li key={item.id}>
-                            //     {item.name} - Quantity: {item.quantity} - Price: ${item.sale_price * item.quantity}
-                            //     <button onClick={() => removeFromCart(item.id)}>Remove</button>
-                            // </li>
+                    {/* Scrollable cart items */}
+                    <div className="flex-1 overflow-y-auto py-4">
+                        {cart?.items.map((item) => (
                             <CartItemCard
-                                key={item.id}
-                                image={item.main_image}
+                                key={item.product_id}
+                                image={item.image}
                                 name={item.name}
-                                price={item.sale_price}
+                                price={item.price}
                                 quantity={item.quantity}
                                 onQuantityChange={(qty) =>
                                     handleQuantityChange(item, qty)
                                 }
-                                onRemove={() => removeFromCart(item.id)}
+                                onRemove={() => removeFromCart(item.product_id)}
                             />
                         ))}
                     </div>
-                        <Button className="block w-full my-2">Checkout</Button>
+
+                    {/* Sticky checkout button */}
+                    {cart && cart.items.length > 0 && (
+                        <div className="sticky bottom-0 bg-white border-t pt-4 pb-2">
+
+                            <Button className="w-full" type="button" onClick={createOrder}>
+                                Checkout
+                            </Button>
+                        </div>
+                    )}
                 </SheetContent>
             </Sheet>
+
 
         </>
     )

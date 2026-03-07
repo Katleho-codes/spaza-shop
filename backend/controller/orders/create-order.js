@@ -13,11 +13,15 @@ const redis = await getRedisClient();
 const resend = new Resend(process.env.RESEND_TOKEN);
 
 const createOrder = async (req, res) => {
-    const { user_id, store_id, product_id, total_amount, quantity } = req.body;
+    const { product_id, total_amount, quantity } = req.body;
+    const { user_id } = req.user;
     const created_at = datetime;
     const orderStatus = "pending";
     const orderRef =
         "ORD-" + crypto.randomBytes(4).toString("hex").toUpperCase();
+
+    // every order will be free shipping when over or equal to 500
+    // minimum than that will be 50
 
     try {
         await createOrderSchema.validate(req.body, { abortEarly: false });
@@ -39,11 +43,14 @@ const createOrder = async (req, res) => {
 
         // create order
         const { rows } = await pool.query(
-            "insert into orders (created_at, user_id, store_id, product_id, total_amount, quantity, status, order_number) values ($1, $2, $3, $4, $5, $6, $7, $8) returning id, created_at, user_id, store_id, product_id, total_amount, quantity, status, currency, order_number",
+            `
+            BEGIN;
+            insert into orders (created_at, user_id, product_id, total_amount, quantity, status, order_number) values ($1, $2, $3, $4, $5, $6, $7) returning id, created_at, user_id, product_id, total_amount, quantity, status, currency, order_number
+            COMMIT;
+            `,
             [
                 created_at,
                 user_id,
-                store_id,
                 product_id,
                 total_amount,
                 quantity,
@@ -94,6 +101,7 @@ const createOrder = async (req, res) => {
             rows: rows[0],
         });
     } catch (error) {
+        await client.query("ROLLBACK");
         process.env.NODE_ENV === "development"
             ? console.log("add order error", error)
             : null;

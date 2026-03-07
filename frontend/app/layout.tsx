@@ -1,10 +1,10 @@
-import type { Metadata } from "next";
-import { Geist, Geist_Mono, Inter } from "next/font/google";
-import { Toaster } from 'react-hot-toast';
-import "./globals.css";
-import "slick-carousel/slick/slick.css";
-import "slick-carousel/slick/slick-theme.css";
 import { CartProvider } from "@/contexts/CartContext";
+import type { Metadata } from "next";
+import { Inter } from "next/font/google";
+import { Toaster } from 'react-hot-toast';
+import "slick-carousel/slick/slick-theme.css";
+import "slick-carousel/slick/slick.css";
+import "./globals.css";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -24,7 +24,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body
-        className={`${inter.variable} ${inter.variable} antialiased`}
+        className={`${inter.variable} antialiased`}
       >
         <CartProvider>{children}</CartProvider>
         <Toaster />

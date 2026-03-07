@@ -1,13 +1,15 @@
 "use client";
 
 import { createContext, useContext } from "react";
-import useCart, { CartItem } from "@/hooks/useCart";
+import useCart, { CartItem } from "@/hooks/carts/useCart";
+import { useSession } from "@/lib/auth-client";
 
 type CartContextType = ReturnType<typeof useCart>;
 
 const CartContext = createContext<CartContextType | null>(null);
 
 export const CartProvider = ({ children }: { children: React.ReactNode }) => {
+
     const cart = useCart();
     return (
         <CartContext.Provider value={cart}>

@@ -1,16 +1,14 @@
-create table shipping (
+create table shipping_addresses (
     id bigserial primary key,
     created_at timestamp,
     updated_at timestamp,
-    order_id integer references orders(id),
-    product_id integer references products(id),
-    total_amount numeric,
-    quantity integer,
-    shipping_cost numeric,
-    shipped_at timestamp,
-    delivered_at timestamp,
-    package_number INTEGER,
-    carrier text,
-    tracking_number text,
-    status text
+    user_id integer references "user"(id),
+    first_name TEXT NOT NULL,
+    last_name TEXT NOT NULL,
+    address TEXT NOT NULL,
+    province TEXT NOT NULL,
+    postal_code TEXT NOT NULL,
+    email text,
+    phone TEXT NOT NULL,
+    country TEXT DEFAULT 'South Africa'
 )

@@ -1,0 +1,231 @@
+"use client"
+
+
+import { Accordion } from "@/components/ui/accordion";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import useGetLatestPendingOrder from "@/hooks/orders/get-latest-pending-order";
+import { useSession } from "@/lib/auth-client";
+import { formatCurrency } from "@/lib/utils";
+import axios from "axios";
+import Link from "next/link";
+import { useEffect, useState } from "react";
+import toast from "react-hot-toast";
+const formatter = new Intl.NumberFormat('en-ZA', {
+    style: 'currency',
+    currency: 'ZAR',
+});
+function CheckoutScreen() {
+    const {
+        data: session,
+        isPending, //loading state
+        error, //error object
+        refetch //refetch the session
+    } = useSession()
+    // const { cart, addToCart, removeFromCart, cartCount } = useCartContext();
+    const { latestPendingOrderList,
+        latestPendingOrderListLoading,
+        order_number,
+        order_id,
+        sub_total,
+        total_amount,
+        delivery_fee,
+        itemsCount } = useGetLatestPendingOrder()
+    const [email, setEmail] = useState("")
+    const [openAccordion, setOpenAccordion] = useState<string[]>(["step-1"])
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [first_name, setFirstName] = useState("")
+    const [last_name, setLastName] = useState("")
+    const [address, setAddress] = useState("")
+    const [province, setProvince] = useState("")
+    const [postal_code, setPostalCode] = useState("")
+    const [phone, setPhone] = useState("")
+
+    // this is for the ui, data will be validated on the backend
+    // const shipping_fee = cartSubTotal >= 500 ? 0 : 60;
+
+
+    useEffect(() => {
+        if (session?.user) {
+            setEmail(session.user.email ?? "")
+        }
+    }, [session])
+
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault()
+        setIsSubmitting(true)
+        const values = { first_name, last_name, address, province, email, postal_code, phone, status: "awaiting_payment" }
+        try {
+            // save shipping first
+            const response = await axios.put(`${process.env.NEXT_PUBLIC_SERVER_URL}/api/orders/${order_id}/shipping`, values, {
+                withCredentials: true
+            })
+
+            if (response.data?.status) toast.success(response.data.message)
+
+            // then submit to PayFast programmatically
+            const form = document.createElement("form")
+            form.method = "POST"
+            form.action = "https://sandbox.payfast.co.za/eng/process"
+
+            const fields = {
+                merchant_id: process.env.NEXT_PUBLIC_Merchant_ID!,
+                merchant_key: process.env.NEXT_PUBLIC_Merchant_Key!,
+                amount: String(Math.round(Number(total_amount))),
+                item_name: order_number,
+                custom_int1: String(order_id), // so notify_url knows which order to update
+            }
+
+            for (const [key, value] of Object.entries(fields)) {
+                const input = document.createElement("input")
+                input.type = "hidden"
+                input.name = key
+                input.value = value
+                form.appendChild(input)
+            }
+
+            document.body.appendChild(form)
+            form.submit()
+
+        } catch (err: any) {
+            console.error(err.message)
+            setIsSubmitting(false)
+        }
+    }
+
+    if (itemsCount === 0) return <div className="h-screen grid place-content-center"><>
+
+        No items to checkout
+        <Link href={"/"}>
+            <Button type="button">Go back to home</Button>
+        </Link>
+    </></div>
+    return (
+        <>
+
+            {
+                isPending ? (<p>Loading user...</p>) : session ? (
+                    <div className="min-h-screen bg-slate-50">
+                        <div className="mx-auto max-w-6xl px-4 py-6">
+
+                            <div className="flex flex-col-reverse md:grid md:grid-cols-2 md:gap-8">
+                                <div className="bg-white rounded-xl border p-6">
+                                    <form onSubmit={handleSubmit}
+                                        className="space-y-6"
+                                    >
+                                        {/* Logo */}
+                                        <Link
+                                            href="/"
+                                            className="flex items-center justify-center gap-2 mb-6"
+                                        >
+                                            <div className="w-10 h-10 rounded-xl bg-linear-to-br from-indigo-500 to-violet-600 flex items-center justify-center">
+                                                <span className="text-white font-bold text-lg">D</span>
+                                            </div>
+                                            <span className="text-xl font-semibold">Deliva</span>
+                                        </Link>
+
+                                        {/* Contact */}
+                                        <div className="space-y-2">
+                                            <h2 className="text-lg font-semibold">Contact</h2>
+                                            <div className="space-y-1">
+                                                <Label htmlFor="email">Email address</Label>
+                                                <Input id="email" type="email" defaultValue={email} onChange={(e) => setEmail(e.target.value)} />
+                                            </div>
+                                        </div>
+
+                                        {/* Shipping */}
+                                        <div className="space-y-4">
+                                            <h2 className="text-lg font-semibold">Shipping information</h2>
+                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                                <div>
+                                                    <Label>First name</Label>
+                                                    <Input onChange={(e) => setFirstName(e.target.value)} required />
+                                                </div>
+                                                <div>
+                                                    <Label>Last name</Label>
+                                                    <Input onChange={(e) => setLastName(e.target.value)} required />
+                                                </div>
+                                            </div>
+                                            <div>
+                                                <Label>Address</Label>
+                                                <Input onChange={(e) => setAddress(e.target.value)} required />
+                                            </div>
+
+                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                                <div>
+                                                    <Label>Province</Label>
+                                                    <select
+                                                        className="w-full h-10 rounded-md border bg-background px-3 text-sm"
+                                                        onChange={(e) => setProvince(e.target.value)}
+                                                        required
+                                                    >
+                                                        <option value="">Select province</option>
+                                                        <option>Gauteng</option>
+                                                        <option>Western Cape</option>
+                                                        <option>KwaZulu-Natal</option>
+                                                    </select>
+                                                </div>
+                                                <div>
+                                                    <Label>Postal code</Label>
+                                                    <Input maxLength={4} onChange={(e) => setPostalCode(e.target.value)} required />
+                                                </div>
+                                            </div>
+
+                                            <div>
+                                                <Label>Phone</Label>
+                                                <Input type="tel" onChange={(e) => setPhone(e.target.value)} required />
+                                            </div>
+
+
+                                            <div className="flex items-center justify-between pt-4">
+                                                <Link href="/">
+                                                    <Button variant="ghost" type="button">Back to cart</Button>
+                                                </Link>
+                                                <Button type="submit" disabled={isSubmitting}>
+                                                    {isSubmitting ? "Processing..." : "Continue to payment"}
+                                                </Button>
+                                            </div>
+                                        </div>
+
+                                    </form>
+                                </div>
+                                <div className="mb-6 md:hidden">
+                                    <Accordion openIds={openAccordion} onChange={setOpenAccordion} multiple>
+                                        <Accordion.Item id="step-1">
+                                            <Accordion.Trigger id="step-1">Order summary ({itemsCount} items)</Accordion.Trigger>
+                                            <Accordion.Content id="step-1">
+                                                <p className="text-gray-500"><span className="font-semibold text-gray-800">{itemsCount}</span> items</p>
+                                                <p className="text-gray-500">Subtotal <span className="font-semibold text-gray-800">{formatCurrency.format(Number(sub_total))}</span></p>
+                                                <p className="text-gray-500">Delivery <span className="font-semibold text-gray-800">{formatCurrency.format(Number(delivery_fee))}</span></p>
+                                                <p className="text-gray-500">To pay <span className="font-semibold text-gray-800">{formatCurrency.format(Number(total_amount))}</span></p>
+                                            </Accordion.Content>
+                                        </Accordion.Item>
+                                    </Accordion>
+
+                                </div>
+                                <div className="hidden md:block">
+                                    <div className="sticky top-6 bg-white rounded-xl border p-6">
+                                        <h2 className="text-lg font-semibold mb-4">Order summary</h2>
+                                        <p><span>{itemsCount}</span> items</p>
+                                        <p>Subtotal <span>{formatCurrency.format(Number(sub_total))}</span></p>
+                                        <p>Delivery <span>{formatCurrency.format(Number(delivery_fee))}</span></p>
+                                        <p>To pay <span>{formatCurrency.format(Number(total_amount))}</span></p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+
+                ) : (<Link href={"/auth/login"}>
+                    <Button className="bg-slate-900 hover:bg-slate-800 text-white rounded-full px-6 cursor-pointer">
+                        Login/signup
+                    </Button>
+                </Link>)
+            }
+        </>
+    )
+}
+
+export default CheckoutScreen

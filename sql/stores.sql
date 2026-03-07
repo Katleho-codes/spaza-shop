@@ -17,5 +17,6 @@ create table stores (
     country text,
     is_active boolean default true,
     is_verified boolean default false,
-    banner_url text
+    banner_url text,
+    operating_hours json
 )

@@ -2,8 +2,16 @@ import express from "express";
 import createOrder from "../../controller/orders/create-order.js";
 import getOrdersByStore from "../../controller/orders/get-orders-by-store.js";
 import { limiter } from "../../utils/limiter.js";
-
+import createOrderFromCart from "../../controller/orders/create-order-from-cart.js";
+import { isLoggedIn } from "../../middleware/isLoggedIn.js";
+import getLatestPendingOrder from "../../controller/orders/get-latest-pending-order.js";
+import addShippingToOrder from "../../controller/orders/add_shipping_details_to_order.js";
+import getThisUsersOrders from "../../controller/orders/get-user-orders.js";
 const router = express.Router();
-router.post("/", limiter, createOrder);
+router.post("/", limiter, isLoggedIn, createOrder);
+router.post("/from-cart", limiter, isLoggedIn, createOrderFromCart);
 router.get("/store/:store_id", getOrdersByStore);
+router.get("/latest-pending", isLoggedIn, getLatestPendingOrder);
+router.put("/:orderId/shipping", isLoggedIn, addShippingToOrder);
+router.get("/user/:id", isLoggedIn, getThisUsersOrders);
 export { router };

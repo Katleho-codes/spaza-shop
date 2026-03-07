@@ -4,11 +4,12 @@ import toast from "react-hot-toast";
 export type TProducts = {
     category: string;
     products: {
-        id: number;
+        product_id: number;
         name: string;
         sale_price: number;
         main_image: string;
         slug: string;
+        store_name: string;
     }[];
 };
 

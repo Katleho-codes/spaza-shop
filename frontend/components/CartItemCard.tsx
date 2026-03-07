@@ -53,7 +53,7 @@ export default function CartItemCard({
                             {name}
                         </h3>
                         <p className="mt-1 text-lg font-bold text-neutral-900">
-                            {formatter.format(price)}
+                            {formatter.format(Number(price))}
                         </p>
                     </div>
 

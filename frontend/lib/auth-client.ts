@@ -2,7 +2,7 @@
 import { createAuthClient } from "better-auth/react";
 
 export const authClient = createAuthClient({
-    baseURL: "http://localhost:8000", // Your Express Backend
+    baseURL: `${process.env.NEXT_PUBLIC_SERVER_URL}`, // Your Express Backend
     fetchOptions: {
         credentials: "include", // Required for cross-origin cookies
     },

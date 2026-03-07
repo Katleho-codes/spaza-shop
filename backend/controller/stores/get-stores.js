@@ -21,7 +21,7 @@ const getAllStores = async (req, res) => {
         if (cached) return res.status(200).json(JSON.parse(cached));
 
         const { rows } = await pool.query(
-            "SELECT id, name, description, email, slug, phone, logo, address_line1, address_line2, city, province, postal_code FROM stores ORDER BY name DESC LIMIT $1 OFFSET $2",
+            "SELECT id, name, description, email, slug, phone, logo, address_line1, address_line2, city, province, postal_code, operating_hours FROM stores ORDER BY name DESC LIMIT $1 OFFSET $2",
             [limit, offset],
         );
 

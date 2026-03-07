@@ -25,16 +25,21 @@ const getProducts = async (req, res) => {
   p.category,
   json_agg(
     json_build_object(
-      'id', p.id,
+      'product_id', p.id,
       'name', p.name,
       'sale_price', p.sale_price,
       'main_image', p.main_image,
-      'slug', p.slug
+      'slug', p.slug,
+      'store_name', s.name
     )
   ) AS products
 FROM products p
+JOIN stores s ON p.store_id = s.id
 GROUP BY p.category
-ORDER BY p.category DESC LIMIT $1 OFFSET $2`,
+ORDER BY p.category DESC
+LIMIT $1 OFFSET $2;
+
+`,
             [limit, offset],
         );
 
