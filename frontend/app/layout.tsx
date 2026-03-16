@@ -7,7 +7,10 @@ import "slick-carousel/slick/slick.css";
 import "./globals.css";
 import SocketProvider from "@/providers/SocketProviders";
 import { HuaweiBadge } from "@/components/HuaweiBadge";
+import axios from "axios"
 
+axios.defaults.headers.common["ngrok-skip-browser-warning"] = "true"
+axios.defaults.withCredentials = true
 const inter = Inter({
   variable: "--font-inter",
   subsets: ["latin"],

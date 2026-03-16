@@ -1,6 +1,6 @@
 CREATE TABLE carts (
     id bigserial PRIMARY KEY,
-    user_id bigint UNIQUE REFERENCES users(id),
+    user_id bigint UNIQUE REFERENCES "user"(id),
     status text DEFAULT 'active',
     -- active | converted | abandoned
     created_at timestamp DEFAULT now(),
