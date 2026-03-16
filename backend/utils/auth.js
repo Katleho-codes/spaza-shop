@@ -3,12 +3,13 @@ import { openAPI } from "better-auth/plugins";
 import { Resend } from "resend";
 import { getRedisClient } from "../config/redis.js";
 import pool from "../db.js";
+import "dotenv/config";
 
 const redis = await getRedisClient();
 const resend = new Resend(process.env.RESEND_TOKEN);
 
 export const auth = betterAuth({
-    baseURL: "http://localhost:8000",
+    baseURL: process.env.BASE_URL,
     plugins: [openAPI()],
     database: pool,
     // use serial as the id for all auth related tables
@@ -54,17 +55,15 @@ export const auth = betterAuth({
             clientSecret: process.env.GOOGLE_CLIENT_SECRET,
         },
     },
-    // todo: turn this on, off for dev
+
     emailVerification: {
         // send a verification email at signup
         // sendOnSignUp: true,
         autoSignInAfterVerification: true,
         async afterEmailVerification(user, request) {
             // Your custom logic here, e.g., grant access to premium features
-            console.log(`${user.email} has been successfully verified!`);
         },
         sendVerificationEmail: async ({ user, newEmail, url, token }) => {
-            console.log(user, newEmail, url, token);
             // data has: user, url, token
             await resend.emails.send({
                 from: "Deliva <onboarding@resend.dev>",

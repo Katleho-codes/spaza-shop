@@ -8,68 +8,88 @@ const redis = await getRedisClient();
 const getProducts = async (req, res) => {
     let { page = 1, limit = 20 } = req.query;
 
-    // Parse and validate `page` and `limit`
-    page = Math.max(parseInt(page, 20), 1); // Ensure `page` is at least 1
-    limit = Math.max(parseInt(limit, 20), 1); // Ensure `limit` is at least 1
+    // fix: radix should be 10 not 20
+    page = Math.max(parseInt(page, 10), 1);
+    limit = Math.max(parseInt(limit, 10), 1);
     const offset = (page - 1) * limit;
 
     const cacheKey = `products:page:${page}:limit:${limit}`;
 
     try {
-        // try cache
         const cached = await redis.get(cacheKey);
-        if (cached) return res.status(200).json(JSON.parse(cached));
+        let data;
 
-        const { rows } = await pool.query(
-            `SELECT
-  p.category,
-  json_agg(
-    json_build_object(
-      'product_id', p.id,
-      'name', p.name,
-      'sale_price', p.sale_price,
-      'main_image', p.main_image,
-      'slug', p.slug,
-      'store_name', s.name
-    )
-  ) AS products
-FROM products p
-JOIN stores s ON p.store_id = s.id
-GROUP BY p.category
-ORDER BY p.category DESC
-LIMIT $1 OFFSET $2;
+        if (cached) {
+            data = JSON.parse(cached);
+        } else {
+            const { rows } = await pool.query(
+                `SELECT
+                    p.category,
+                    json_agg(
+                        json_build_object(
+                            'product_id', p.id,
+                            'name', p.name,
+                            'sale_price', p.sale_price,
+                            'main_image', p.main_image,
+                            'slug', p.slug,
+                            'stock_quantity', p.stock_quantity,
+                            'store_name', s.name
+                        )
+                    ) AS products
+                 FROM products p
+                 JOIN stores s ON p.store_id = s.id
+                 GROUP BY p.category
+                 ORDER BY p.category DESC
+                 LIMIT $1 OFFSET $2`,
+                [limit, offset],
+            );
 
-`,
-            [limit, offset],
-        );
+            const total = await pool.query("SELECT COUNT(*) FROM products");
+            const totalProducts = parseInt(total.rows[0].count, 10);
 
-        // Fetch the total count of products
-        const total = await pool.query("SELECT COUNT(*) FROM products");
-        const totalStores = parseInt(total.rows[0].count, 10);
+            data = {
+                data: rows,
+                meta: {
+                    currentPage: page,
+                    totalPages: Math.ceil(totalProducts / limit),
+                    totalProducts,
+                },
+            };
 
-        const response = {
-            data: rows,
-            meta: {
-                currentPage: page,
-                totalPages: Math.ceil(totalStores / limit),
-                totalStores,
-            },
-        };
+            await redis.setEx(cacheKey, 60, JSON.stringify(data));
+        }
 
-        // cache result
-        // this expires
-        await redis.setEx(cacheKey, 60, JSON.stringify(response));
-        return res.status(200).json(response);
+        // override stock_quantity with live redis stock for each product
+        for (const category of data.data) {
+            for (const product of category.products) {
+                const stockKey = `product:${product.product_id}:stock`;
+                const cachedStock = await redis.get(stockKey);
+
+                if (cachedStock !== null) {
+                    product.stock_quantity = Number(cachedStock);
+                } else {
+                    // not in redis yet, use db value and cache it
+                    const { rows: stockRows } = await pool.query(
+                        `SELECT stock_quantity FROM products WHERE id = $1`,
+                        [product.product_id],
+                    );
+                    const dbStock = stockRows[0]?.stock_quantity ?? 0;
+                    await redis.set(stockKey, dbStock);
+                    product.stock_quantity = dbStock;
+                }
+            }
+        }
+
+        return res.status(200).json(data);
     } catch (error) {
-        console.log("get-products.js error", error);
+        console.error("get-products.js error", error);
         return res.status(500).json({
             message: "Internal server error",
             error:
                 process.env.NODE_ENV === "production"
                     ? undefined
-                    : error.message, // Hide detailed error message in production
+                    : error.message,
         });
     }
 };
-
 export default getProducts;

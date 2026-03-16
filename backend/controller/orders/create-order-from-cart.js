@@ -24,7 +24,6 @@ const createOrderFromCart = async (req, res) => {
             `SELECT id FROM carts WHERE user_id = $1 AND status = 'active' LIMIT 1`,
             [id],
         );
-        // console.log("cartRes", JSON.stringify(cartRes.rows));
         if (cartRes.rows.length === 0) {
             throw new Error("No active cart");
         }
@@ -96,6 +95,9 @@ const createOrderFromCart = async (req, res) => {
             `UPDATE carts SET status = 'converted' WHERE id = $1`,
             [cartId],
         );
+
+        // clear redis cart since it is now converted
+        await redis.del(`cart:user:${id}`);
 
         await client.query("COMMIT");
 

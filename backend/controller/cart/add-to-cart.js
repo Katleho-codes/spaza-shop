@@ -1,7 +1,7 @@
 import "dotenv/config";
 import { getRedisClient } from "../../config/redis.js";
 import pool from "../../db.js";
-import datetime from "../../utils/datetime.js";
+import { io } from "../../services/io.js";
 
 const redis = await getRedisClient();
 const CART_CACHE_TTL = 60 * 30;
@@ -56,21 +56,25 @@ const addToCart = async (req, res) => {
             return res.status(409).json({ message: "Not enough stock" });
         }
 
-        // Find or create active cart
-        let cartId;
+        // check for existing active cart first
         const cartResult = await pool.query(
-            "SELECT id FROM carts WHERE user_id = $1 AND status = 'active' LIMIT 1",
+            `SELECT id FROM carts WHERE user_id = $1 AND status = 'active' LIMIT 1`,
             [userId],
         );
 
+        let cartId;
+
         if (cartResult.rows.length > 0) {
+            // active cart exists, use it
             cartId = cartResult.rows[0].id;
-        } else {
-            const { rows } = await pool.query(
-                "INSERT INTO carts (user_id) VALUES ($1) RETURNING id",
+        }
+        if (cartResult.rows.length === 0) {
+            // no active cart — create one
+            const newCart = await pool.query(
+                `INSERT INTO carts (user_id, status) VALUES ($1, 'active') RETURNING id`,
                 [userId],
             );
-            cartId = rows[0].id;
+            cartId = newCart.rows[0].id;
         }
 
         // Insert or update cart item
@@ -123,7 +127,8 @@ const addToCart = async (req, res) => {
                 EX: CART_CACHE_TTL,
             });
         }
-
+        // emit updated cart to user's room
+        io.to(`user:${userId}`).emit("cart:updated", cart);
         return res.status(201).json({ message: "Added to cart", cart });
     } catch (error) {
         console.error("addToCart error:", error);

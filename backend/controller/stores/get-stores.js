@@ -43,7 +43,6 @@ const getAllStores = async (req, res) => {
         await redis.setEx(cacheKey, 60, JSON.stringify(response));
         return res.status(200).json(response);
     } catch (error) {
-        console.log("get-stores.js error", error);
         return res.status(500).json({
             message: "Internal server error",
             error:

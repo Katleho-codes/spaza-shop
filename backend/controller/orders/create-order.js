@@ -72,12 +72,10 @@ const createOrder = async (req, res) => {
         // low-stock alert (AFTER decrement)
         const lowThreshold = await redis.get(`product:${product_id}:threshold`);
         if (lowThreshold && remainingStock <= Number(lowThreshold)) {
-            console.log("Email: Almost out of stock. Threshold met");
             const { rows } = await pool.query(
                 `select email from "user" where id = $1`,
                 [user_id],
             );
-            // console.log("user in create-order.js", rows);
             const { data, error } = await resend.emails.send({
                 from: "Deliva <onboarding@resend.dev>",
                 to: [rows[0]?.email],
@@ -86,7 +84,6 @@ const createOrder = async (req, res) => {
             });
 
             if (error) {
-                console.log("resend send order email error", error);
                 return res.status(400).json({ error });
             }
         }

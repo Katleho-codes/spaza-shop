@@ -4,6 +4,7 @@ import { Button } from './ui/button'
 import { formatCurrency } from '@/lib/utils'
 import { ShoppingBasketIcon } from 'lucide-react'
 import { useSession } from '@/lib/auth-client'
+import { useRouter } from 'next/navigation'
 
 type TProductDataToSendToBackend = {
     product_id: number;
@@ -13,7 +14,7 @@ type TProductDataToSendToBackend = {
     slug: string;
 }
 type THandleAddToCart = {
-    handleAddToCart: (data: TProductDataToSendToBackend) => void;
+    handleAddToCart: (e: React.SyntheticEvent, data: TProductDataToSendToBackend) => void;
 }
 export default function ProductsDisplay({ handleAddToCart }: THandleAddToCart) {
 
@@ -34,6 +35,9 @@ export default function ProductsDisplay({ handleAddToCart }: THandleAddToCart) {
     } = useSession()
 
 
+    const router = useRouter();
+
+
     return (
         <>
             <div className="space-y-8">
@@ -47,6 +51,7 @@ export default function ProductsDisplay({ handleAddToCart }: THandleAddToCart) {
                                 <div
                                     key={product.product_id}
                                     className="group overflow-hidden rounded-xl bg-white border border-sm border-[#eee]"
+                                    onClick={()=> router.push("/products/" + product.slug)}
                                 >
                                     <div className="relative h-64 w-full overflow-hidden bg-neutral-100 p-5">
                                         <img
@@ -67,7 +72,7 @@ export default function ProductsDisplay({ handleAddToCart }: THandleAddToCart) {
                                         <p className="font-bold text-gray-800">
                                             {formatCurrency.format(product.sale_price)}
                                         </p>
-                                        {!session ? <Button disabled className="w-full my-2">Login to add to cart</Button> : <Button className="w-full my-2" onClick={() => handleAddToCart(product)}><ShoppingBasketIcon className="w-6 h-6" />Add to cart</Button>
+                                        {!session ? <Button disabled className="w-full my-2">Login to add to cart</Button> : <Button className="w-full my-2" onClick={(e) => handleAddToCart(e, product)}><ShoppingBasketIcon className="w-6 h-6" />Add to cart</Button>
                                         }
                                     </div>
 
@@ -80,7 +85,7 @@ export default function ProductsDisplay({ handleAddToCart }: THandleAddToCart) {
             </div>
 
 
-            <div className="flex gap-2 justify-center my-4">
+            <div className="flex gap-2 justify-center my-4 py-3">
                 {currentProductPage < totalProductPages && (
                     <Button
                         onClick={() => fetchProducts(currentProductPage + 1)}

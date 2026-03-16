@@ -33,20 +33,6 @@ function AccountScreen() {
         await authClient.signOut();
     }
 
-    // const updatePersonalDetails = async (e: SyntheticEvent) => {
-    //     e.preventDefault();
-    //     const sessionId = session?.session?.id
-    //     const values = { name, email };
-    //     console.log("values", values)
-    //     try {
-    //         const response = await axios.put("http://localhost:8000/api/account", values, {
-    //             withCredentials: true
-    //         })
-    //         toast.success(response?.data?.message);
-    //     } catch (error) {
-    //         console.error("update personal details error", error)
-    //     }
-    // }
     const [isEditingName, setIsEditingName] = useState(false)
     const [isEditingEmail, setIsEditingEmail] = useState(false)
 
@@ -86,7 +72,7 @@ function AccountScreen() {
 
                         <MainNav />
 
-                        <div className="h-[calc(100vh-88px)] mt-22 mx-auto container px-4">
+                        <div className="h-[calc(100vh-64px)] mx-auto container px-4">
                             <div className="pt-3">
                                 <h1 className="my-3">Hi, {session?.user?.name}</h1>
 
@@ -136,17 +122,11 @@ function AccountScreen() {
                                         </Accordion.Content>
                                     </Accordion.Item>
 
-                                    <Accordion.Item id="step-2">
-                                        <Accordion.Trigger id="step-2">Security details</Accordion.Trigger>
-                                        <Accordion.Content id="step-2">
-                                            Upload a government-issued ID and a selfie. Usually verified in under 2 minutes.
-                                        </Accordion.Content>
-                                    </Accordion.Item>
 
 
                                 </Accordion>
 
-                                <Button type="button" variant={"outline"} className="w-full cursor-pointer my-3 rounded-sm" onClick={logout}>Logout</Button>
+                                <Button type="button" className="w-full cursor-pointer my-3 rounded-sm" onClick={logout}>Logout</Button>
                             </div>
                         </div>
                     </>

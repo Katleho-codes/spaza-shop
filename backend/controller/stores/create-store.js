@@ -3,23 +3,26 @@ import * as Yup from "yup";
 import "dotenv/config";
 import datetime from "../../utils/datetime.js";
 import { getRedisClient } from "../../config/redis.js";
+import { io } from "../../services/io.js";
 
 const createStoreSchema = Yup.object({
     name: Yup.string()
         .required("The name is required")
         .min(3, "Cannot be less than 3 characters"),
     description: Yup.string().required("The description is required"),
-    email: Yup.string().email(),
-    phone: Yup.string().max(10, "Maximum numbers has to be 10"),
+    email: Yup.string().email().required("The email is required"),
+    phone: Yup.string()
+        .max(10, "Maximum numbers has to be 10")
+        .required("The phone number is required"),
     logo: Yup.string(),
-    address_line1: Yup.string(),
+    address_line1: Yup.string().required("The address is required"),
     address_line2: Yup.string(),
-    city: Yup.string(),
-    province: Yup.string(),
+    city: Yup.string().required("The city is required"),
+    province: Yup.string().required("The province is required"),
     postal_code: Yup.string()
-        .required("The name is required")
-        .min(4, "The zip code has to be 4 characters")
-        .max(4, "The zip code has to be 4 characters"),
+        .required("The postal code is required")
+        .min(4, "Can only be 4 characters")
+        .max(4, "Can only be 4 characters"),
 });
 
 const redis = await getRedisClient();
@@ -37,8 +40,8 @@ const createStore = async (req, res) => {
         province,
         postal_code,
         banner_url,
-        owner_id,
     } = req.body;
+    const { id: userId } = req.user;
     // country will always be South Africa
     // is_active is true by default
     // is_verified once the email and all profiles are filled out
@@ -63,7 +66,7 @@ const createStore = async (req, res) => {
                 phone,
                 logo,
                 slug,
-                owner_id,
+                userId,
                 address_line1,
                 address_line2,
                 city,
@@ -80,6 +83,8 @@ const createStore = async (req, res) => {
         }
 
         await redis.set(`store${rows[0]?.id}`, JSON.stringify(rows[0]));
+        // emit updated store to user's room
+        io.to(`user:${userId}`).emit("store:created", rows[0]);
         return res.status(201).json({
             message: "Store successfuly created",
             rows: rows[0],
@@ -94,7 +99,9 @@ const createStore = async (req, res) => {
             error.inner.forEach((err) => {
                 errors[err.path] = err.message; // Collect field validation errors
             });
-            return res.status(400).json({ errors });
+            return res
+                .status(400)
+                .json({ message: "Check errors in your form", errors });
         }
         res.status(500).json({ message: "Store not added, try again" });
     }

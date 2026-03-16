@@ -24,6 +24,7 @@ import { useSession } from "@/lib/auth-client";
 import axios from "axios";
 import { useState, useEffect } from "react";
 import toast from "react-hot-toast";
+import socket from "../socket";
 
 const useCart = () => {
     // const [cart, setCart] = useState<IGetCart[]>([]);
@@ -51,7 +52,7 @@ const useCart = () => {
             );
 
             if (data) {
-                console.log("user cart", data);
+                // console.log("user cart", data);
                 setCart(data);
             }
         } catch (error: any) {
@@ -69,24 +70,42 @@ const useCart = () => {
         fetchUserCart();
     }, [session?.user?.id]);
 
+    // realtime cart updates via socket
+    useEffect(() => {
+        socket.on("cart:updated", (updatedCart: IGetCart) => {
+            setCart(updatedCart);
+        });
+
+        return () => {
+            socket.off("cart:updated");
+        };
+    }, []);
+
     // this will handle both add and update since we only update the quantity
     const addToCart = async (item: CartItem) => {
-        const response = await axios.post(
-            `${process.env.NEXT_PUBLIC_SERVER_URL}/api/carts`,
-            item,
-            {
-                withCredentials: true,
-            },
-        );
-        if (response.status === 201) {
-            toast.success(`${response?.data?.message}`);
+        try {
+            const response = await axios.post(
+                `${process.env.NEXT_PUBLIC_SERVER_URL}/api/carts`,
+                item,
+                {
+                    withCredentials: true,
+                },
+            );
+            if (response.status === 201) {
+                toast.success(`${response?.data?.message}`);
+            }
+        } catch (error: any) {
+            console.error("addToCart error", error?.response?.data?.message); // shows actual backend error
+            toast.error(
+                error?.response?.data?.message ?? "Could not add to cart",
+            );
         }
     };
 
-    const removeFromCart = (productId: number) => {
+    const removeFromCart = async (productId: number) => {
+        // optimistically update UI first
         setCart((prevCart) => {
             if (!prevCart) return prevCart;
-
             return {
                 ...prevCart,
                 items: prevCart.items.filter(
@@ -94,6 +113,19 @@ const useCart = () => {
                 ),
             };
         });
+
+        try {
+            await axios.delete(
+                `${process.env.NEXT_PUBLIC_SERVER_URL}/api/carts/item/${productId}`,
+                { withCredentials: true },
+            );
+        } catch (error: any) {
+            // revert on failure by refetching
+            fetchUserCart();
+            toast.error(
+                error?.response?.data?.message ?? "Could not remove item",
+            );
+        }
     };
 
     const clearCart = () => {

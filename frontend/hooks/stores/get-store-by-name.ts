@@ -35,7 +35,7 @@ const useGetStoreByName = (
             if (data) {
                 console.log(
                     "API response products order:",
-                    data.products.map((p) => ({
+                    data.products.map((p: any) => ({
                         name: p.name,
                         price: p.sale_price,
                     })),

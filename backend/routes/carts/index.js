@@ -5,6 +5,7 @@ import updateCart from "../../controller/cart/update-cart.js";
 import clearCart from "../../controller/cart/clear-cart.js";
 import { limiter } from "../../utils/limiter.js";
 import { isLoggedIn } from "../../middleware/isLoggedIn.js";
+import removeFromCart from "../../controller/cart/remove_item.js";
 const router = express.Router();
 
 router.post("/", limiter, isLoggedIn, addToCart);
@@ -12,4 +13,5 @@ router.post("/", limiter, isLoggedIn, addToCart);
 router.get("/", isLoggedIn, getUserCart);
 router.put("/", limiter, isLoggedIn, updateCart);
 router.delete("/", limiter, isLoggedIn, clearCart);
+router.delete("/item/:id", limiter, isLoggedIn, removeFromCart);
 export { router };

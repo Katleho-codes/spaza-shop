@@ -19,5 +19,9 @@
 - [x] context for user cart
 - [x] custom accordion (didn't like the default one)
 
-<!-- ### Fixed
-- [x]  -->
+## 2026-03-16
+
+### Added
+
+- [x] socket io for realtime crud
+- [ ] other changes (i am tired)

@@ -4,6 +4,7 @@ import "dotenv/config";
 import datetime from "../../utils/datetime.js";
 import crypto from "crypto";
 import { getRedisClient } from "../../config/redis.js";
+import { io } from "../../services/io.js";
 
 const createProductSchema = Yup.object({
     name: Yup.string()
@@ -48,10 +49,10 @@ const createProduct = async (req, res) => {
         main_image,
         image_two,
         category,
-        store_id,
+        store_slug,
         low_stock_threshold,
     } = req.body;
-    const { user } = req.user;
+    const { id: userId } = req.user;
     const created_at = datetime;
     const sku = "SKU-" + crypto.randomBytes(4).toString("hex").toUpperCase();
     const publicId = "PID" + crypto.randomInt(10_000_000, 100_000_000);
@@ -64,54 +65,67 @@ const createProduct = async (req, res) => {
 
     try {
         await createProductSchema.validate(req.body, { abortEarly: false });
-        const { rows } = await pool.query(
-            "insert into products (created_at, name, description, sku, cost_price, sale_price, stock_quantity, main_image, image_two, category, slug, public_id, store_id, low_stock_threshold, created_by) values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15) returning id, created_at, name, description, sku, cost_price, sale_price, stock_quantity, main_image, image_two, category, slug, public_id, store_id, low_stock_threshold",
-            [
-                created_at,
-                name,
-                description,
-                sku,
-                cost_price,
-                sale_price,
-                stock_quantity,
-                main_image,
-                image_two,
-                category,
-                slug,
-                publicId,
-                store_id,
-                low_stock_threshold,
-                user.id,
-            ],
+
+        const findStoreId = await pool.query(
+            "select id from stores where slug = $1 limit 1",
+            [store_slug],
         );
-        const product = rows[0];
+        if (findStoreId.rows.length > 0) {
+            const { rows } = await pool.query(
+                "insert into products (created_at, name, description, sku, cost_price, sale_price, stock_quantity, main_image, image_two, category, slug, public_id, store_id, low_stock_threshold, created_by) values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15) returning id, created_at, name, description, sku, cost_price, sale_price, stock_quantity, main_image, image_two, category, slug, public_id, store_id, low_stock_threshold",
+                [
+                    created_at,
+                    name,
+                    description,
+                    sku,
+                    cost_price,
+                    sale_price,
+                    stock_quantity,
+                    main_image,
+                    image_two,
+                    category,
+                    slug,
+                    publicId,
+                    findStoreId.rows[0].id,
+                    low_stock_threshold,
+                    userId,
+                ],
+            );
+            const product = rows[0];
+            await redis.set(
+                `product:${product.id}:stock`,
+                product.stock_quantity,
+            );
+            await redis.set(
+                `product:${product.id}:threshold`,
+                product.low_stock_threshold,
+            );
+            // emit updated cart to user's room
+            io.to(`user:${userId}`).emit("product:added", product);
+            return res.status(201).json({
+                message: "Product successfuly created",
+                rows: rows[0],
+            });
+        }
+
         // Store product metadata (NO stock mutation here)
-        await redis.set(
-            `product:${product.id}:data`,
-            JSON.stringify({
-                id: product.id,
-                name: product.name,
-                description: product.description,
-                sku: product.sku,
-                sale_price: product.sale_price,
-                main_image: product.main_image,
-                image_two: product.image_two,
-                category: product.category,
-                slug: product.slug,
-                public_id: product.public_id,
-                store_id: product.store_id,
-            }),
-        );
+        // await redis.set(
+        //     `product:${product.id}:data`,
+        //     JSON.stringify({
+        //         id: product.id,
+        //         name: product.name,
+        //         description: product.description,
+        //         sku: product.sku,
+        //         sale_price: product.sale_price,
+        //         main_image: product.main_image,
+        //         image_two: product.image_two,
+        //         category: product.category,
+        //         slug: product.slug,
+        //         public_id: product.public_id,
+        //         store_id: product.store_id,
+        //     }),
+        // );
         // Store stock as atomic integer
-        await redis.set(`product:${product.id}:stock`, product.stock_quantity);
-        await redis.set(
-            `product:${product.id}:threshold`,
-            product.low_stock_threshold,
-        );
-        return res.status(201).json({
-            message: "Product successfuly created",
-            rows: rows[0],
-        });
     } catch (error) {
         process.env.NODE_ENV === "development"
             ? console.log("add product error", error)

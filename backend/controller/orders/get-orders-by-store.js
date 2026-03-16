@@ -31,6 +31,7 @@ ORDER BY o.created_at DESC;
         return res.status(200).json(rows);
     } catch (error) {
         console.log("get-orders.js error", error);
+        
     }
 };
 

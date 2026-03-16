@@ -7,7 +7,8 @@ create table orders (
     delivery_fee numeric,
     total_amount numeric,
     created_at timestamp,
-    shipping_address_id integer REFERENCES shipping_addresses(id)
+    shipping_address_id integer REFERENCES shipping_addresses(id),
+    store_id integer REFERENCES stores(id) ON DELETE CASCADE,
 );
 
 create table order_items (

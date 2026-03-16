@@ -5,6 +5,8 @@ import { Toaster } from 'react-hot-toast';
 import "slick-carousel/slick/slick-theme.css";
 import "slick-carousel/slick/slick.css";
 import "./globals.css";
+import SocketProvider from "@/providers/SocketProviders";
+import { HuaweiBadge } from "@/components/HuaweiBadge";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -21,12 +23,17 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+
   return (
     <html lang="en">
-      <body
-        className={`${inter.variable} antialiased`}
-      >
-        <CartProvider>{children}</CartProvider>
+      <body className={`${inter.variable} antialiased`}>
+   
+        <SocketProvider>
+          <CartProvider>
+            {children}
+          </CartProvider>
+        </SocketProvider>
+
         <Toaster />
       </body>
     </html>

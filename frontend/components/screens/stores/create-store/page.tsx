@@ -1,286 +1,307 @@
 "use client"
 import { Button } from '@/components/ui/button';
-import { Store, Upload } from 'lucide-react';
+import axios from 'axios';
+import { ArrowLeft, Check, ImagePlus, Store, Upload } from 'lucide-react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useState } from 'react';
+import toast from 'react-hot-toast';
+
+
+interface AddStoreErrorMessages {
+    name?: string;
+    description?: string;
+    email?: string;
+    phone?: string;
+    address_line1?: string;
+    city?: string;
+    province?: string;
+    postal_code?: string;
+}
 
 export default function CreateStoreScreen() {
-    const [logoPreview, setLogoPreview] = useState(null);
-    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [logoPreview, setLogoPreview] = useState<string | null>(null)
+    const [isSubmitting, setIsSubmitting] = useState(false)
+    const [step, setStep] = useState<1 | 2 | 3>(1)
+    const [createdStoreId, setCreatedStoreId] = useState<number | null>(null)
+    const [createdStoreSlug, setCreatedStoreSlug] = useState<string | null>(null)
+    const [logoFile, setLogoFile] = useState<File | null>(null)
+    const [isUploading, setIsUploading] = useState(false)
 
-    const handleLogoChange = (e) => {
-        const file = e.target.files?.[0];
+    const [errors, setErrors] = useState<AddStoreErrorMessages>({}); // Explicitly typed
+    // form state
+    const [name, setName] = useState("")
+    const [description, setDescription] = useState("")
+    const [email, setEmail] = useState("")
+    const [phone, setPhone] = useState("")
+    const [address_line1, setAddressLine1] = useState("")
+    const [address_line2, setAddressLine2] = useState("")
+    const [city, setCity] = useState("")
+    const [province, setProvince] = useState("")
+    const [postal_code, setPostalCode] = useState("")
+    const [country, setCountry] = useState("South Africa")
+
+    const router = useRouter()
+
+    const handleLogoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0]
         if (file) {
-            const reader = new FileReader();
-            reader.onloadend = () => {
-                setLogoPreview(reader.result);
-            };
-            reader.readAsDataURL(file);
+            setLogoPreview(URL.createObjectURL(file))
+            setLogoFile(file)
         }
-    };
+    }
 
-    const onSubmit = async (data) => {
+    const steps = [
+        { id: 1, label: "Store" },
+        { id: 2, label: "Contact" },
+        { id: 3, label: "Address" },
+    ]
+
+    const onSubmit = async (e: React.SyntheticEvent) => {
+        e.preventDefault()
         setIsSubmitting(true);
+        const values = {
+            name, description, email, phone,
+            address_line1, address_line2,
+            city, province, postal_code, country,
+        }
         try {
-            // Handle form submission
-            console.log('Store data:', data);
-            // Add your submission logic here
-        } catch (error) {
-            console.error('Error creating store:', error);
+            const response = await axios.post(`${process.env.NEXT_PUBLIC_SERVER_URL}/api/stores`, values, { withCredentials: true });
+            toast.success(response.data.message)
+            setCreatedStoreId(response.data.rows.id)
+            setCreatedStoreSlug(response.data.rows.slug)
+            router.push("/stores/my-stores")
+        } catch (error: any) {
+            // if (error?.response.data?.message) {
+            //     toast.error(`${error?.response.data?.message}`);
+            // } else if (error.response && error.response.data.errors) {
+            //     console.log(error.response)
+            //     setErrors(error.response.data.errors); // Set validation errors to state
+            // }
+            if (error?.response) {
+                toast.error(`${error?.response.data?.message}`);
+                setErrors(error.response.data.errors);
+            }
         } finally {
             setIsSubmitting(false);
         }
     };
 
+    const handleImageUpload = async () => {
+        if (!logoFile || !createdStoreId) return
+        setIsUploading(true)
+        try {
+            const formData = new FormData()
+            formData.append("image", logoFile)
+
+            const response = await axios.post(
+                `${process.env.NEXT_PUBLIC_SERVER_URL}/api/upload?type=store&id=${createdStoreId}`,
+                formData,
+                { withCredentials: true }
+            )
+            toast.success(response?.data.message)
+            router.push(`/stores/my-stores`)
+        } catch (err: any) {
+            toast.error(err?.response?.data?.message ?? "Upload failed")
+        } finally {
+            setIsUploading(false)
+        }
+    }
+
     return (
-        <div className="min-h-screen bg-linear-to-b from-neutral-50 to-white py-12 px-4">
-            <div className="mx-auto max-w-2xl">
-                <Link href="/"><Button className='cursor-pointer'>Back</Button></Link>
-                {/* Header */}
-                <div className="mb-8 text-center">
-                    {/* <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-neutral-900">
-                        <Store className="h-8 w-8 text-white" />
-                    </div> */}
-                    <Link href={"/"} className="flex items-center gap-2 text-center justify-center mb-4">
-                        <div className="w-10 h-10 rounded-xl bg-linear-to-br from-indigo-500 to-violet-600 flex items-center justify-center">
-                            <span className="text-white font-bold text-lg">D</span>
-                        </div>
-                        <span className="text-xl font-semibold text-slate-900">Deliva</span>
-                    </Link>
-                    <h1 className="text-3xl font-bold text-neutral-900">Create your store</h1>
-                    <p className="mt-2 text-neutral-600">Fill in the details to get started</p>
+        <div className="min-h-screen">
+            <style>{`
+                .float-label-input { position: relative; }
+                .float-label-input input,
+                .float-label-input textarea,
+                .float-label-input select {
+                    width: 100%; background: white;
+                    border: 1.5px solid #E5E4DF; border-radius: 10px;
+                    padding: 22px 16px 8px; font-size: 15px; color: #191919;
+                    outline: none; transition: border-color 0.2s;
+                }
+                .float-label-input input:focus,
+                .float-label-input textarea:focus,
+                .float-label-input select:focus { border-color: #F86624; }
+                .float-label-input label {
+                    position: absolute; left: 16px; top: 8px;
+                    font-size: 11px; font-weight: 500; color: #999;
+                    letter-spacing: 0.04em; text-transform: uppercase; pointer-events: none;
+                }
+                .fade-in { animation: fadeUp 0.3s ease forwards; }
+                @keyframes fadeUp {
+                    from { opacity: 0; transform: translateY(8px); }
+                    to { opacity: 1; transform: translateY(0); }
+                }
+            `}</style>
+
+            {/* top bar */}
+            <div className="border-b border-[#E5E4DF] bg-white px-6 py-4 flex items-center justify-between">
+                <Link href="/" className="flex items-center gap-2 text-sm text-[#666] hover:text-[#191919] transition-colors">
+                    <ArrowLeft className="h-4 w-4" /> Back
+                </Link>
+                <div className="flex items-center gap-2">
+                    <div className="w-7 h-7 rounded-lg bg-linear-to-br from-[#F86624] to-[#F15025] flex items-center justify-center">
+                        <span className="text-white font-bold text-xs">D</span>
+                    </div>
+                    <span className="font-semibold text-[#191919]">Deliva</span>
                 </div>
+                <div className="w-16" />
+            </div>
 
-                {/* Form */}
-                <form className="space-y-6">
-                    <div className="rounded-xl bg-white p-8 shadow-sm border border-neutral-200">
-                        {/* Store Information */}
-                        <div className="mb-6">
-                            <h2 className="text-lg font-semibold text-neutral-900 mb-4">Store Information</h2>
-                            <div className="space-y-6">
-                                {/* Name */}
-                                <div className="relative">
-                                    <input
-                                        type="text"
-                                        id="name"
-                                        className="peer w-full rounded-sm border border-neutral-300 px-4 pt-6 pb-2 text-neutral-900 placeholder-transparent focus:border-neutral-900 focus:outline-none focus:ring-1 focus:ring-neutral-900"
-                                        placeholder="Store name"
-                                    />
-                                    <label
-                                        htmlFor="name"
-                                        className="absolute left-4 top-2 text-xs text-neutral-600 transition-all peer-placeholder-shown:top-4 peer-placeholder-shown:text-base peer-placeholder-shown:text-neutral-400 peer-focus:top-2 peer-focus:text-xs peer-focus:text-neutral-900"
-                                    >
-                                        Store name
-                                    </label>
-                                </div>
+            <div className="max-w-lg mx-auto px-4 py-10">
 
-                                {/* Description */}
-                                <div className="relative">
-                                    <textarea
-                                        id="description"
-                                        rows={3}
-                                        className="peer w-full rounded-lg border border-neutral-300 px-4 pt-6 pb-2 text-neutral-900 placeholder-transparent focus:border-neutral-900 focus:outline-none focus:ring-1 focus:ring-neutral-900 resize-none"
-                                        placeholder="Description"
-                                    />
-                                    <label
-                                        htmlFor="description"
-                                        className="absolute left-4 top-2 text-xs text-neutral-600 transition-all peer-placeholder-shown:top-4 peer-placeholder-shown:text-base peer-placeholder-shown:text-neutral-400 peer-focus:top-2 peer-focus:text-xs peer-focus:text-neutral-900"
-                                    >
-                                        Description
-                                    </label>
-                                </div>
-
-                                {/* Logo Upload */}
-                                <div>
-                                    <label className="block text-sm font-medium text-neutral-700 mb-2">
-                                        Store Logo
-                                    </label>
-                                    <div className="flex items-center gap-4">
-                                        <input
-                                            type="file"
-                                            id="logo"
-                                            accept="image/*"
-                                            className="hidden"
-                                            onChange={handleLogoChange}
-                                        />
-                                        <label
-                                            htmlFor="logo"
-                                            className="flex cursor-pointer items-center gap-2 rounded-lg border-2 border-dashed border-neutral-300 px-4 py-3 text-sm text-neutral-600 transition-colors hover:border-neutral-400 hover:bg-neutral-50"
-                                        >
-                                            <Upload className="h-4 w-4" />
-                                            Choose file
-                                        </label>
-                                        {logoPreview && (
-                                            <div className="h-16 w-16 overflow-hidden rounded-lg border border-neutral-200">
-                                                <img src={logoPreview} alt="Logo preview" className="h-full w-full object-contain" />
-                                            </div>
-                                        )}
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Contact Information */}
-                        <div className="mb-6">
-                            <h2 className="text-lg font-semibold text-neutral-900 mb-4">Contact Information</h2>
-                            <div className="grid gap-6 md:grid-cols-2">
-                                {/* Email */}
-                                <div className="relative">
-                                    <input
-                                        type="email"
-                                        id="email"
-                                        className="peer w-full rounded-lg border border-neutral-300 px-4 pt-6 pb-2 text-neutral-900 placeholder-transparent focus:border-neutral-900 focus:outline-none focus:ring-1 focus:ring-neutral-900"
-                                        placeholder="Email"
-                                    />
-                                    <label
-                                        htmlFor="email"
-                                        className="absolute left-4 top-2 text-xs text-neutral-600 transition-all peer-placeholder-shown:top-4 peer-placeholder-shown:text-base peer-placeholder-shown:text-neutral-400 peer-focus:top-2 peer-focus:text-xs peer-focus:text-neutral-900"
-                                    >
-                                        Email
-                                    </label>
-                                </div>
-
-                                {/* Phone */}
-                                <div className="relative">
-                                    <input
-                                        type="tel"
-                                        id="phone"
-                                        className="peer w-full rounded-lg border border-neutral-300 px-4 pt-6 pb-2 text-neutral-900 placeholder-transparent focus:border-neutral-900 focus:outline-none focus:ring-1 focus:ring-neutral-900"
-                                        placeholder="Phone"
-                                    />
-                                    <label
-                                        htmlFor="phone"
-                                        className="absolute left-4 top-2 text-xs text-neutral-600 transition-all peer-placeholder-shown:top-4 peer-placeholder-shown:text-base peer-placeholder-shown:text-neutral-400 peer-focus:top-2 peer-focus:text-xs peer-focus:text-neutral-900"
-                                    >
-                                        Phone
-                                    </label>
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Address */}
-                        <div>
-                            <h2 className="text-lg font-semibold text-neutral-900 mb-4">Address</h2>
-                            <div className="space-y-6">
-                                {/* Address Line 1 */}
-                                <div className="relative">
-                                    <input
-                                        type="text"
-                                        id="address_line1"
-                                        className="peer w-full rounded-lg border border-neutral-300 px-4 pt-6 pb-2 text-neutral-900 placeholder-transparent focus:border-neutral-900 focus:outline-none focus:ring-1 focus:ring-neutral-900"
-                                        placeholder="Address line 1"
-                                    />
-                                    <label
-                                        htmlFor="address_line1"
-                                        className="absolute left-4 top-2 text-xs text-neutral-600 transition-all peer-placeholder-shown:top-4 peer-placeholder-shown:text-base peer-placeholder-shown:text-neutral-400 peer-focus:top-2 peer-focus:text-xs peer-focus:text-neutral-900"
-                                    >
-                                        Address line 1
-                                    </label>
-                                </div>
-
-                                {/* Address Line 2 */}
-                                <div className="relative">
-                                    <input
-                                        type="text"
-                                        id="address_line2"
-                                        className="peer w-full rounded-lg border border-neutral-300 px-4 pt-6 pb-2 text-neutral-900 placeholder-transparent focus:border-neutral-900 focus:outline-none focus:ring-1 focus:ring-neutral-900"
-                                        placeholder="Address line 2"
-                                    />
-                                    <label
-                                        htmlFor="address_line2"
-                                        className="absolute left-4 top-2 text-xs text-neutral-600 transition-all peer-placeholder-shown:top-4 peer-placeholder-shown:text-base peer-placeholder-shown:text-neutral-400 peer-focus:top-2 peer-focus:text-xs peer-focus:text-neutral-900"
-                                    >
-                                        Address line 2 (optional)
-                                    </label>
-                                </div>
-
-                                {/* City, Province */}
-                                <div className="grid gap-6 md:grid-cols-2">
-                                    <div className="relative">
-                                        <input
-                                            type="text"
-                                            id="city"
-                                            className="peer w-full rounded-lg border border-neutral-300 px-4 pt-6 pb-2 text-neutral-900 placeholder-transparent focus:border-neutral-900 focus:outline-none focus:ring-1 focus:ring-neutral-900"
-                                            placeholder="City"
-                                        />
-                                        <label
-                                            htmlFor="city"
-                                            className="absolute left-4 top-2 text-xs text-neutral-600 transition-all peer-placeholder-shown:top-4 peer-placeholder-shown:text-base peer-placeholder-shown:text-neutral-400 peer-focus:top-2 peer-focus:text-xs peer-focus:text-neutral-900"
-                                        >
-                                            City
-                                        </label>
-                                    </div>
-
-                                    <div className="relative">
-                                        <select
-                                            id="province"
-                                            className="peer w-full rounded-lg border border-neutral-300 px-4 pt-6 pb-2 text-neutral-900 focus:border-neutral-900 focus:outline-none focus:ring-1 focus:ring-neutral-900 appearance-none bg-white"
-                                        >
-                                            <option value="">Select province</option>
-                                            <option value="Eastern Cape">Eastern Cape</option>
-                                            <option value="Free State">Free State</option>
-                                            <option value="Gauteng">Gauteng</option>
-                                            <option value="KwaZulu-Natal">KwaZulu-Natal</option>
-                                            <option value="Limpopo">Limpopo</option>
-                                            <option value="Mpumalanga">Mpumalanga</option>
-                                            <option value="Northern Cape">Northern Cape</option>
-                                            <option value="North West">North West</option>
-                                            <option value="Western Cape">Western Cape</option>
-                                        </select>
-                                        <label
-                                            htmlFor="province"
-                                            className="absolute left-4 top-2 text-xs text-neutral-600 peer-focus:text-neutral-900"
-                                        >
-                                            Province
-                                        </label>
-                                    </div>
-                                </div>
-
-                                {/* Postal Code, Country */}
-                                <div className="grid gap-6 md:grid-cols-2">
-                                    <div className="relative">
-                                        <input
-                                            type="text"
-                                            id="postal_code"
-                                            className="peer w-full rounded-lg border border-neutral-300 px-4 pt-6 pb-2 text-neutral-900 placeholder-transparent focus:border-neutral-900 focus:outline-none focus:ring-1 focus:ring-neutral-900"
-                                            placeholder="Postal code"
-                                        />
-                                        <label
-                                            htmlFor="postal_code"
-                                            className="absolute left-4 top-2 text-xs text-neutral-600 transition-all peer-placeholder-shown:top-4 peer-placeholder-shown:text-base peer-placeholder-shown:text-neutral-400 peer-focus:top-2 peer-focus:text-xs peer-focus:text-neutral-900"
-                                        >
-                                            Postal code
-                                        </label>
-                                    </div>
-
-                                    <div className="relative">
-                                        <input
-                                            type="text"
-                                            id="country"
-                                            className="peer w-full rounded-lg border border-neutral-300 px-4 pt-6 pb-2 text-neutral-900 placeholder-transparent focus:border-neutral-900 focus:outline-none focus:ring-1 focus:ring-neutral-900"
-                                            placeholder="Country"
-                                        />
-                                        <label
-                                            htmlFor="country"
-                                            className="absolute left-4 top-2 text-xs text-neutral-600 transition-all peer-placeholder-shown:top-4 peer-placeholder-shown:text-base peer-placeholder-shown:text-neutral-400 peer-focus:top-2 peer-focus:text-xs peer-focus:text-neutral-900"
-                                        >
-                                            Country
-                                        </label>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
+                <>
+                    {/* heading */}
+                    <div className="mb-10">
+                        <p className="text-xs font-semibold uppercase tracking-widest text-[#F86624] mb-2">New store</p>
+                        <h1 className="text-3xl font-light text-[#191919]">
+                            Set up your<br /><em>spaza shop.</em>
+                        </h1>
                     </div>
 
-                    {/* Submit Button */}
-                    <Button
-                        type="submit"
-                        disabled={isSubmitting}
-                        className="w-full bg-neutral-900 py-6 text-base font-semibold hover:bg-neutral-800"
-                    >
-                        {isSubmitting ? 'Creating Store...' : 'Create Store'}
-                    </Button>
-                </form>
+                    {/* step indicator */}
+                    <div className="flex items-center mb-10">
+                        {steps.map((s, i) => (
+                            <div key={s.id} className="flex items-center flex-1 last:flex-none">
+                                <div className="flex items-center gap-2">
+                                    <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-semibold transition-all ${step === s.id ? "bg-[#F86624] text-white shadow-md shadow-orange-200" :
+                                        step > s.id ? "bg-[#191919] text-white" :
+                                            "bg-[#E5E4DF] text-[#999]"
+                                        }`}>
+                                        {step > s.id ? <Check className="h-3.5 w-3.5" /> : s.id}
+                                    </div>
+                                    <span className={`text-sm font-medium ${step === s.id ? "text-[#191919]" : "text-[#999]"}`}>
+                                        {s.label}
+                                    </span>
+                                </div>
+                                {i < steps.length - 1 && (
+                                    <div className={`flex-1 h-px mx-3 ${step > s.id ? "bg-[#191919]" : "bg-[#E5E4DF]"}`} />
+                                )}
+                            </div>
+                        ))}
+                    </div>
+
+                    <form onSubmit={onSubmit}>
+
+                        {/* step 1 */}
+                        {step === 1 && (
+                            <div className="space-y-4 fade-in">
+                                <div className="float-label-input">
+                                    <input type="text" id="name" value={name} onChange={(e) => setName(e.target.value)} placeholder="Store name" />
+                                    <label htmlFor="name">Store name</label>
+                                </div>
+
+                                {errors.name && <p className="text-sm text-red-500 font-medium">{errors.name}</p>}
+                                <div className="float-label-input">
+                                    <textarea id="description" rows={4} value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Description" style={{ resize: "none", paddingTop: "22px" }} />
+                                    <label htmlFor="description">Description</label>
+                                </div>
+
+                                <button type="button" onClick={() => setStep(2)}
+                                    className="w-full h-12 rounded-xl bg-[#191919] text-white text-sm font-medium hover:bg-[#333] transition-colors">
+                                    Continue →
+                                </button>
+                            </div>
+                        )}
+
+                        {/* step 2 */}
+                        {step === 2 && (
+                            <div className="space-y-4 fade-in">
+                                <div className="float-label-input">
+                                    <input type="email" id="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Email" />
+                                    <label htmlFor="email">Email address</label>
+                                </div>
+                                {errors.email && <p className="text-sm text-red-500 font-medium">{errors.email}</p>}
+
+                                <div className="float-label-input">
+                                    <input type="tel" id="phone" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="Phone" />
+                                    <label htmlFor="phone">Phone number</label>
+                                </div>
+                                {errors.phone && <p className="text-sm text-red-500 font-medium">{errors.phone}</p>}
+                                <div className="flex gap-3">
+                                    <button type="button" onClick={() => setStep(1)}
+                                        className="flex-1 h-12 rounded-xl border-2 border-[#E5E4DF] text-sm text-[#666] hover:border-[#999] transition-colors">
+                                        ← Back
+                                    </button>
+                                    <button type="button" onClick={() => setStep(3)}
+                                        className="flex-1 h-12 rounded-xl bg-[#191919] text-white text-sm font-medium hover:bg-[#333] transition-colors">
+                                        Continue →
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* step 3 */}
+                        {step === 3 && (
+                            <div className="space-y-4 fade-in">
+                                <div className="float-label-input">
+                                    <input type="text" id="address_line1" value={address_line1} onChange={(e) => setAddressLine1(e.target.value)} placeholder="Address line 1" />
+                                    <label htmlFor="address_line1">Address line 1</label>
+                                </div>
+                                {errors.address_line1 && <p className="text-sm text-red-500 font-medium">{errors.address_line1}</p>}
+                                <div className="float-label-input">
+                                    <input type="text" id="address_line2" value={address_line2} onChange={(e) => setAddressLine2(e.target.value)} placeholder="Address line 2 (optional)" />
+                                    <label htmlFor="address_line2">Address line 2</label>
+                                </div>
+
+                                <div className="grid grid-cols-2 gap-3">
+                                    <div className="float-label-input">
+                                        <input type="text" id="city" value={city} onChange={(e) => setCity(e.target.value)} placeholder="City" />
+                                        <label htmlFor="city">City</label>
+                                        {errors.city && <p className="text-sm text-red-500 font-medium">{errors.city}</p>}
+                                    </div>
+
+                                    <div className="float-label-input">
+                                        <select id="province" value={province} onChange={(e) => setProvince(e.target.value)}>
+                                            <option value="">Select</option>
+                                            <option>Eastern Cape</option>
+                                            <option>Free State</option>
+                                            <option>Gauteng</option>
+                                            <option>KwaZulu-Natal</option>
+                                            <option>Limpopo</option>
+                                            <option>Mpumalanga</option>
+                                            <option>Northern Cape</option>
+                                            <option>North West</option>
+                                            <option>Western Cape</option>
+                                        </select>
+                                        <label htmlFor="province">Province</label>
+                                        {errors.province && <p className="text-sm text-red-500 font-medium">{errors.province}</p>}
+                                    </div>
+
+                                </div>
+                                <div className="grid grid-cols-2 gap-3">
+                                    <div className="float-label-input">
+                                        <input type="text" id="postal_code" value={postal_code} onChange={(e) => setPostalCode(e.target.value)} placeholder="Postal code" maxLength={4} />
+                                        <label htmlFor="postal_code">Postal code</label>
+                                        {errors.postal_code && <p className="text-sm text-red-500 font-medium">{errors.postal_code}</p>}
+                                    </div>
+
+                                    <div className="float-label-input">
+                                        <input type="text" id="country" value={country} onChange={(e) => setCountry(e.target.value)} placeholder="Country" />
+                                        <label htmlFor="country">Country</label>
+                                    </div>
+
+                                </div>
+                                <div className="flex gap-3">
+                                    <button type="button" onClick={() => setStep(2)}
+                                        className="flex-1 h-12 rounded-xl border-2 border-[#E5E4DF] text-sm text-[#666] hover:border-[#999] transition-colors">
+                                        ← Back
+                                    </button>
+                                    <button type="submit" disabled={isSubmitting}
+                                        className="flex-1 h-12 rounded-xl bg-linear-to-r from-[#F86624] to-[#F15025] text-white text-sm font-semibold hover:opacity-90 transition-opacity disabled:opacity-50">
+                                        {isSubmitting ? "Creating..." : "Create store"}
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+                    </form>
+
+                    <p className="text-center text-xs text-[#999] mt-8">
+                        Step {step} of 3 · {step === 1 ? "Store details" : step === 2 ? "Contact info" : "Your address"}
+                    </p>
+                </>
+
             </div>
         </div>
     );
