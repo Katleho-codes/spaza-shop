@@ -40,6 +40,7 @@
   },
   "devDependencies": {
     "@faker-js/faker": "^10.2.0",
+    "@netlify/plugin-nextjs": "^5.15.9",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/react": "^19",
