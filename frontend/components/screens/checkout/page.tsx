@@ -117,9 +117,9 @@ function CheckoutScreen() {
                 amount: String(Math.round(Number(total_amount))),
                 item_name: order_number,
                 custom_int1: String(order_id), // so notify_url knows which order to update
-                notify_url: `${process.env.NEXT_PUBLIC_SERVER_URL}/api/payments/notify`,
-                return_url: `${process.env.NEXT_PUBLIC_APP_URL}/orders/${order_id}/tracking`,
-                cancel_url: `${process.env.NEXT_PUBLIC_APP_URL}/checkout`,
+                // notify_url: `${process.env.NEXT_PUBLIC_SERVER_URL}/api/payments/notify`,
+                // return_url: `${process.env.NEXT_PUBLIC_APP_URL}/orders/${order_id}/tracking`,
+                // cancel_url: `${process.env.NEXT_PUBLIC_APP_URL}/checkout`,
             }
 
             for (const [key, value] of Object.entries(fields)) {

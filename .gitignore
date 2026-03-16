@@ -35,5 +35,5 @@ frontend/.vercel
 frontend/out/
 frontend/coverage/
 backend/node_modules/
-.env*
+.env
 moodle_install.sh
